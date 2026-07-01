@@ -101,9 +101,9 @@ def run_backup(src_root, dest_dir=None, batch_size=100):
         print(f"Error: Source directory '{src_root}' does not exist.")
         sys.exit(1)
         
-    if dest_dir is None:
+    if not dest_dir:
         dest_dir = os.environ.get("PIXEL_CAMERA_DIR") or get_pixel_camera_dir()
-        if dest_dir is None:
+        if not dest_dir:
             print("Error: Could not locate your Google Pixel Camera directory.")
             print("Ensure your phone is connected, unlocked, and set to 'File Transfer' mode,")
             print("or explicitly set 'PIXEL_CAMERA_DIR' in your '.env' file.")

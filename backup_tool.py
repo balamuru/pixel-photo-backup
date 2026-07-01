@@ -60,17 +60,13 @@ def clear_camera_dir(camera_dir):
         except Exception as e:
             print(f"  Error removing {item}: {e}")
 
-def copy_subdirectory(src_dir, dest_dir):
-    files = [f for f in os.listdir(src_dir) if os.path.isfile(os.path.join(src_dir, f))]
-    files.sort()
-    total_files = len(files)
-    print(f"\nFound {total_files} files in '{src_dir}' to copy to '{dest_dir}'.")
-    
+def copy_files(file_paths, dest_dir):
+    total_files = len(file_paths)
     copied = 0
     failed = []
     
-    for idx, f in enumerate(files, 1):
-        src_file = os.path.join(src_dir, f)
+    for idx, src_file in enumerate(file_paths, 1):
+        f = os.path.basename(src_file)
         dest_file = os.path.join(dest_dir, f)
         
         # Avoid copying if already exists with same size
@@ -96,7 +92,7 @@ def copy_subdirectory(src_dir, dest_dir):
     print(f"Finished copy. Successfully copied/verified {copied}/{total_files} files.")
     return len(failed) == 0
 
-def run_backup(src_root, dest_dir=None):
+def run_backup(src_root, dest_dir=None, batch_size=100):
     if not src_root:
         print("Error: No source directory specified. Define 'SRC_DIR' in '.env' or use '--src'.")
         sys.exit(1)
@@ -116,55 +112,104 @@ def run_backup(src_root, dest_dir=None):
     print(f"Using source directory: {src_root}")
     print(f"Using destination Pixel directory: {dest_dir}")
     
-    # Get all subdirectories in the source root
+    # 1. Check for physical subdirectories in the source root
     subdirs = [os.path.join(src_root, d) for d in os.listdir(src_root) if os.path.isdir(os.path.join(src_root, d))]
     subdirs.sort()
     
-    if not subdirs:
-        print(f"No subdirectories found in '{src_root}'.")
-        return
-        
-    print(f"Found {len(subdirs)} subdirectories to process:")
-    for sd in subdirs:
-        print(f"  - {os.path.basename(sd)}")
-        
-    for sd in subdirs:
-        sd_name = os.path.basename(sd)
-        print(f"\n==================================================")
-        print(f"Processing subdirectory: {sd_name}")
-        print(f"==================================================")
-        
-        # Ensure destination is clear before starting
-        clear_camera_dir(dest_dir)
-        
-        # Copy files
-        success = copy_subdirectory(sd, dest_dir)
-        if not success:
-            print("Warning: Some files failed to copy.")
+    if subdirs:
+        # Scenario A: Source root contains physical subdirectories (batch by subdirectories)
+        print(f"\nScenario A: Found {len(subdirs)} subdirectories to process:")
+        for sd in subdirs:
+            print(f"  - {os.path.basename(sd)}")
             
-        # Ask for confirmation
-        while True:
-            response = input(f"\nHave you confirmed that files from '{sd_name}' are backed up on Google Photos? (yes/no): ").strip().lower()
-            if response in ("yes", "y"):
-                print(f"Confirmed. Proceeding to clear the device and copy the next folder...")
-                break
-            elif response in ("no", "n"):
-                print("Holding. Please verify your backups and run again when ready.")
-                sys.exit(0)
-            else:
-                print("Invalid input. Please enter 'yes' or 'no'.")
+        for sd in subdirs:
+            sd_name = os.path.basename(sd)
+            print(f"\n==================================================")
+            print(f"Processing subdirectory: {sd_name}")
+            print(f"==================================================")
+            
+            # Ensure destination is clear before starting
+            clear_camera_dir(dest_dir)
+            
+            # Get files
+            files_to_copy = [os.path.join(sd, f) for f in os.listdir(sd) if os.path.isfile(os.path.join(sd, f))]
+            files_to_copy.sort()
+            
+            # Copy files
+            success = copy_files(files_to_copy, dest_dir)
+            if not success:
+                print("Warning: Some files failed to copy.")
                 
+            # Ask for confirmation
+            while True:
+                response = input(f"\nHave you confirmed that files from '{sd_name}' are backed up on Google Photos? (yes/no): ").strip().lower()
+                if response in ("yes", "y"):
+                    print(f"Confirmed. Proceeding to clear the device and copy the next folder...")
+                    break
+                elif response in ("no", "n"):
+                    print("Holding. Please verify your backups and run again when ready.")
+                    sys.exit(0)
+                else:
+                    print("Invalid input. Please enter 'yes' or 'no'.")
+    else:
+        # Scenario B: Flat directory with no subdirectories. Batch the files directly.
+        all_files = [os.path.join(src_root, f) for f in os.listdir(src_root) if os.path.isfile(os.path.join(src_root, f))]
+        all_files.sort()
+        
+        if not all_files:
+            print(f"No files or subdirectories found to process in '{src_root}'.")
+            return
+            
+        total_files = len(all_files)
+        # Create virtual batches
+        batches = [all_files[i:i + batch_size] for i in range(0, total_files, batch_size)]
+        total_batches = len(batches)
+        
+        print(f"\nScenario B: Flat directory found with {total_files} files.")
+        print(f"Splitting into {total_batches} virtual batches (batch size: {batch_size}).")
+        
+        for idx, batch in enumerate(batches, 1):
+            batch_name = f"Batch {idx} of {total_batches} (files {((idx-1)*batch_size)+1} - {min(idx*batch_size, total_files)})"
+            print(f"\n==================================================")
+            print(f"Processing: {batch_name}")
+            print(f"==================================================")
+            
+            # Ensure destination is clear before starting
+            clear_camera_dir(dest_dir)
+            
+            # Copy files
+            success = copy_files(batch, dest_dir)
+            if not success:
+                print("Warning: Some files failed to copy.")
+                
+            # Ask for confirmation
+            while True:
+                response = input(f"\nHave you confirmed that files from '{batch_name}' are backed up on Google Photos? (yes/no): ").strip().lower()
+                if response in ("yes", "y"):
+                    print(f"Confirmed. Proceeding to clear the device and copy the next batch...")
+                    break
+                elif response in ("no", "n"):
+                    print("Holding. Please verify your backups and run again when ready.")
+                    sys.exit(0)
+                else:
+                    print("Invalid input. Please enter 'yes' or 'no'.")
+                    
     # Final clear
     clear_camera_dir(dest_dir)
-    print("\nAll subdirectories processed successfully!")
+    print("\nAll files processed successfully!")
 
 if __name__ == "__main__":
     # Load environment variables from local .env
     load_env()
     
+    # Get batch size configuration
+    env_batch_size = os.environ.get("BATCH_SIZE")
+    default_batch_size = int(env_batch_size) if env_batch_size and env_batch_size.isdigit() else 100
+    
     parser = argparse.ArgumentParser(description="Iterative copy/backup tool for MTP Google Pixel.")
-    parser.add_argument("--src", default=os.environ.get("SRC_DIR"), help="Source root directory containing subdirectories of images.")
+    parser.add_argument("--src", default=os.environ.get("SRC_DIR"), help="Source root directory containing subdirectories or files of images.")
     parser.add_argument("--dest", default=os.environ.get("PIXEL_CAMERA_DIR"), help="Explicit destination Camera directory (optional).")
+    parser.add_argument("--batch-size", type=int, default=default_batch_size, help="Batch size when copying flat directory files (default: 100).")
     
     args = parser.parse_args()
-    run_backup(args.src, args.dest)
+    run_backup(args.src, args.dest, args.batch_size)

@@ -1,58 +1,75 @@
 # Pixel Photo Backup Tool
 
-This project contains a repeatable CLI script to interactively transfer batches of images/videos from your local computer to an attached Google Pixel's Camera folder (via MTP), verifying backups step-by-step to save storage on the device.
+An interactive CLI utility to stream photo and video backups from your computer to an attached Google Pixel device via USB/MTP. Designed to orchestrate and throttle large transfers so you can leverage the Pixel's unlimited cloud backup without exhausting its local storage or crashing the MTP connection.
 
-## Why this exists
-Transferring massive amounts of images directly to a Google Pixel via MTP for backing up to Google Photos can overwhelm the device's storage or crash the slow/unstable MTP connection. 
+---
 
-This tool supports two scenarios:
-1.  **Nested Subdirectories (Scenario A):** If your source directory contains folders, it will copy folder-by-folder and pause for confirmation after each folder is completed.
-2.  **Flat Directory (Scenario B):** If your source directory contains no subdirectories and just a large flat list of media files, it will automatically group the files into virtual chunks/batches (e.g. 100 files at a time) and pause for confirmation after each batch is completed.
+## The Pixel 1 Proxy Strategy
+The original **first-generation Google Pixel (2016)** retains a lifetime grant of **unlimited free backups at Original Quality** to Google Photos. This project builds an automated bridge to this free archive pipeline:
 
-After each batch is successfully copied, it pauses, waits for you to verify that they have been backed up to the cloud (e.g. via Google Photos), deletes them from the device to free up space, and then proceeds to the next batch.
+*   **Unlimited Storage:** Uploads do not consume any Google Account or Google One storage quota.
+*   **Original Quality:** Photos and videos (including raw files and 4K media) are preserved at native resolution with zero compression.
+*   **Cost-Efficient Archiving:** Safely offloads media libraries from cameras, DSLRs, main computers, or newer smartphones.
 
-## The Pixel 1 Proxy Strategy & Advantages
-Using a **first-generation Google Pixel (2016)** as a proxy device for backups offers a unique and highly beneficial setup:
+---
 
-*   **Unlimited Lifetime Backups:** The original Google Pixel (Pixel 1) is the only device that retains a lifetime grant of **unlimited free backups at Original Quality** to Google Photos. Photos and videos uploaded from this phone do not count against your Google Account storage quota (Google One storage).
-*   **Zero Compression:** Unlike other newer phones that are capped at "Storage Saver" quality or receive no free backup quota, uploads from a Pixel 1 are stored in their raw, native resolution/quality (DSLR raw files, 4K video, ProRes/LOG formats).
-*   **Cost-Efficient Archiving:** By using the Pixel 1 as a proxy, you can offload and archive massive amounts of media from other phones, cameras, or computers for free without having to pay for expensive Google One storage subscriptions.
-*   **Automated Pipeline:** The script helps you easily feed media from your high-end workspace computers directly into this free backup pipeline without manual drag-and-drop fatigue or running out of storage on the Pixel's local drive during the transfer.
+## Why This Tool is Necessary
+Moving a large photo library to a Pixel over a standard USB cable presents major issues:
+1.  **Storage Exhaustion:** If your source folder is 500GB and the Pixel only has 32GB of free space, a direct copy will fail instantly.
+2.  **MTP Instability:** Transferring thousands of files in a single operation regularly causes Linux GVFS/MTP mounts to hang or crash.
 
+### The Solution: Batch & Verify
+This script copies files in throttled, sequential batches. After each batch:
+1.  It **pauses** and prompts you to verify that Google Photos has successfully uploaded the files to the cloud.
+2.  Once you confirm, it **deletes** the files from the Pixel to free up local space.
+3.  It automatically proceeds to copy the next batch.
 
-## Configuration (.env)
-A `.env` file is used to store paths. Copy the example file and customize it:
+---
+
+## Getting Started
+
+### 1. Prerequisites
+*   A Google Pixel phone connected via USB.
+*   The phone must be **unlocked** with USB settings set to **File Transfer / Android Auto** (usually accessible from the swipe-down notification drawer).
+*   **No Virtual Environment Required:** The tool only uses standard Python libraries (`os`, `sys`, `shutil`, `glob`, `argparse`).
+
+### 2. Configuration
+Copy the configuration template:
 ```bash
 cp .env.example .env
 ```
-Open `.env` and set:
-*   `SRC_DIR`: The path to the directory containing the subdirectories of pictures you want to back up.
-*   `PIXEL_CAMERA_DIR`: (Optional) The explicit mount path to your Pixel's Camera folder. If left blank, the tool will try to auto-detect it under `/run/user/<uid>/gvfs/`.
-*   `BATCH_SIZE`: (Optional) The size of virtual batches when processing flat directories (default: 100).
+Edit `.env` to set your paths:
+```env
+# Path to your local photo directory (source)
+SRC_DIR=/path/to/your/photos
 
-## Do I need a virtual environment (venv)?
-**No, a virtual environment is not required.** The script relies entirely on standard Python libraries (`os`, `sys`, `shutil`, `glob`, `argparse`) so you can run it out of the box with your system Python.
+# Optional: Manual mount path (leave empty for auto-detection)
+PIXEL_CAMERA_DIR=
 
-If you decide to extend the tool and install third-party dependencies in the future, you can initialize a virtual environment:
-```bash
-# Create a venv
-python3 -m venv venv
-
-# Activate it
-source venv/bin/activate
+# Optional: Number of files per batch for flat directories
+BATCH_SIZE=100
 ```
 
-## How to run
+### 3. Running the Tool
+Run the executable script:
+```bash
+./backup_tool.py
+```
+*Note: You can override `.env` settings on the fly using command-line arguments (e.g., `./backup_tool.py --src /my/custom/path --batch-size 50`).*
 
-1. Connect your Google Pixel to your computer via USB.
-2. Unlock your phone, swipe down, select the Android System USB notification, and change the USB mode to **File Transfer / Android Auto**.
-3. Run the script:
-   ```bash
-   ./backup_tool.py
-   ```
+---
 
-### Overrides
-You can also override the `.env` configuration using CLI arguments:
-*   `--src`: Override the source directory path.
-*   `--dest`: Override the destination directory path.
-*   `--batch-size`: Override the batch size (default: 100).
+## Driving via AI Assistants
+This project is configured out-of-the-box for AI coding agents.
+
+### Google Antigravity
+The workspace contains a project-scoped skill at `.agents/skills/pixel-photo-backup/SKILL.md` that is auto-discovered when you open this directory. You can trigger it by asking:
+> *"Back up my media folder to the Pixel"*
+
+The agent will automatically manage the CLI, copy files, prompt you for verification at each checkpoint, clear the Pixel, and notify you when the entire transfer is finished.
+
+### Claude Code & General Agents
+Since the project utilizes a clean CLI interface and simple `.env` configurations, you can instruct general-purpose terminal agents:
+> *"Run the photo backup script"*
+
+The agent will run the command, monitor the logs, and interactively prompt you for confirmation before writing responses back to the subprocess.

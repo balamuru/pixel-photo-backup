@@ -1,0 +1,170 @@
+#!/usr/bin/env python3
+import os
+import sys
+import shutil
+import glob
+import argparse
+
+def load_env(env_path=None):
+    """Loads environment variables from a .env file if it exists."""
+    if env_path is None:
+        # Check in the current working directory, then in the script's directory
+        env_path = ".env"
+        if not os.path.exists(env_path):
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            env_path = os.path.join(script_dir, ".env")
+            
+    if os.path.exists(env_path):
+        with open(env_path, "r") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" in line:
+                    key, val = line.split("=", 1)
+                    # Strip quotes if present
+                    val = val.strip().strip("'\"")
+                    os.environ[key.strip()] = val
+
+def get_pixel_camera_dir():
+    # Attempt to locate the Pixel mount dynamically under /run/user/<uid>/gvfs/
+    uid = os.getuid()
+    gvfs_dir = f"/run/user/{uid}/gvfs"
+    if not os.path.isdir(gvfs_dir):
+        return None
+    
+    # Look for mtp:host=Google_Pixel_*
+    pixel_mounts = glob.glob(os.path.join(gvfs_dir, "mtp:host=Google_Pixel_*"))
+    if not pixel_mounts:
+        return None
+    
+    # Take the first matched mount
+    mount_path = pixel_mounts[0]
+    camera_path = os.path.join(mount_path, "Internal shared storage", "DCIM", "Camera")
+    if os.path.isdir(camera_path):
+        return camera_path
+    return None
+
+def clear_camera_dir(camera_dir):
+    print(f"Clearing contents of '{camera_dir}'...")
+    for item in os.listdir(camera_dir):
+        if item in (".", ".."):
+            continue
+        item_path = os.path.join(camera_dir, item)
+        try:
+            if os.path.isdir(item_path):
+                shutil.rmtree(item_path)
+            else:
+                os.remove(item_path)
+            print(f"  Removed: {item}")
+        except Exception as e:
+            print(f"  Error removing {item}: {e}")
+
+def copy_subdirectory(src_dir, dest_dir):
+    files = [f for f in os.listdir(src_dir) if os.path.isfile(os.path.join(src_dir, f))]
+    files.sort()
+    total_files = len(files)
+    print(f"\nFound {total_files} files in '{src_dir}' to copy to '{dest_dir}'.")
+    
+    copied = 0
+    failed = []
+    
+    for idx, f in enumerate(files, 1):
+        src_file = os.path.join(src_dir, f)
+        dest_file = os.path.join(dest_dir, f)
+        
+        # Avoid copying if already exists with same size
+        if os.path.exists(dest_file):
+            try:
+                if os.path.getsize(src_file) == os.path.getsize(dest_file):
+                    print(f"[{idx}/{total_files}] Skipping {f} (already exists on destination)")
+                    copied += 1
+                    continue
+            except Exception:
+                pass
+        
+        try:
+            print(f"[{idx}/{total_files}] Copying {f} ...", end="", flush=True)
+            # Use copyfile to avoid copying permission bits/metadata (fails on MTP)
+            shutil.copyfile(src_file, dest_file)
+            print(" Done")
+            copied += 1
+        except Exception as e:
+            print(f" Failed: {e}")
+            failed.append((f, str(e)))
+            
+    print(f"Finished copy. Successfully copied/verified {copied}/{total_files} files.")
+    return len(failed) == 0
+
+def run_backup(src_root, dest_dir=None):
+    if not src_root:
+        print("Error: No source directory specified. Define 'SRC_DIR' in '.env' or use '--src'.")
+        sys.exit(1)
+        
+    if not os.path.isdir(src_root):
+        print(f"Error: Source directory '{src_root}' does not exist.")
+        sys.exit(1)
+        
+    if dest_dir is None:
+        dest_dir = os.environ.get("PIXEL_CAMERA_DIR") or get_pixel_camera_dir()
+        if dest_dir is None:
+            print("Error: Could not locate your Google Pixel Camera directory.")
+            print("Ensure your phone is connected, unlocked, and set to 'File Transfer' mode,")
+            print("or explicitly set 'PIXEL_CAMERA_DIR' in your '.env' file.")
+            sys.exit(1)
+            
+    print(f"Using source directory: {src_root}")
+    print(f"Using destination Pixel directory: {dest_dir}")
+    
+    # Get all subdirectories in the source root
+    subdirs = [os.path.join(src_root, d) for d in os.listdir(src_root) if os.path.isdir(os.path.join(src_root, d))]
+    subdirs.sort()
+    
+    if not subdirs:
+        print(f"No subdirectories found in '{src_root}'.")
+        return
+        
+    print(f"Found {len(subdirs)} subdirectories to process:")
+    for sd in subdirs:
+        print(f"  - {os.path.basename(sd)}")
+        
+    for sd in subdirs:
+        sd_name = os.path.basename(sd)
+        print(f"\n==================================================")
+        print(f"Processing subdirectory: {sd_name}")
+        print(f"==================================================")
+        
+        # Ensure destination is clear before starting
+        clear_camera_dir(dest_dir)
+        
+        # Copy files
+        success = copy_subdirectory(sd, dest_dir)
+        if not success:
+            print("Warning: Some files failed to copy.")
+            
+        # Ask for confirmation
+        while True:
+            response = input(f"\nHave you confirmed that files from '{sd_name}' are backed up on Google Photos? (yes/no): ").strip().lower()
+            if response in ("yes", "y"):
+                print(f"Confirmed. Proceeding to clear the device and copy the next folder...")
+                break
+            elif response in ("no", "n"):
+                print("Holding. Please verify your backups and run again when ready.")
+                sys.exit(0)
+            else:
+                print("Invalid input. Please enter 'yes' or 'no'.")
+                
+    # Final clear
+    clear_camera_dir(dest_dir)
+    print("\nAll subdirectories processed successfully!")
+
+if __name__ == "__main__":
+    # Load environment variables from local .env
+    load_env()
+    
+    parser = argparse.ArgumentParser(description="Iterative copy/backup tool for MTP Google Pixel.")
+    parser.add_argument("--src", default=os.environ.get("SRC_DIR"), help="Source root directory containing subdirectories of images.")
+    parser.add_argument("--dest", default=os.environ.get("PIXEL_CAMERA_DIR"), help="Explicit destination Camera directory (optional).")
+    
+    args = parser.parse_args()
+    run_backup(args.src, args.dest)

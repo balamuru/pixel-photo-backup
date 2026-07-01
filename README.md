@@ -11,6 +11,15 @@ This tool supports two scenarios:
 
 After each batch is successfully copied, it pauses, waits for you to verify that they have been backed up to the cloud (e.g. via Google Photos), deletes them from the device to free up space, and then proceeds to the next batch.
 
+## The Pixel 1 Proxy Strategy & Advantages
+Using a **first-generation Google Pixel (2016)** as a proxy device for backups offers a unique and highly beneficial setup:
+
+*   **Unlimited Lifetime Backups:** The original Google Pixel (Pixel 1) is the only device that retains a lifetime grant of **unlimited free backups at Original Quality** to Google Photos. Photos and videos uploaded from this phone do not count against your Google Account storage quota (Google One storage).
+*   **Zero Compression:** Unlike other newer phones that are capped at "Storage Saver" quality or receive no free backup quota, uploads from a Pixel 1 are stored in their raw, native resolution/quality (DSLR raw files, 4K video, ProRes/LOG formats).
+*   **Cost-Efficient Archiving:** By using the Pixel 1 as a proxy, you can offload and archive massive amounts of media from other phones, cameras, or computers for free without having to pay for expensive Google One storage subscriptions.
+*   **Automated Pipeline:** The script helps you easily feed media from your high-end workspace computers directly into this free backup pipeline without manual drag-and-drop fatigue or running out of storage on the Pixel's local drive during the transfer.
+
+
 ## Configuration (.env)
 A `.env` file is used to store paths. Copy the example file and customize it:
 ```bash

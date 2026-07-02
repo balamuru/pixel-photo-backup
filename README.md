@@ -24,16 +24,21 @@ This script copies files in throttled, sequential batches. After each batch:
 2.  Once you confirm, it **deletes** the files from the Pixel to free up local space.
 3.  It automatically proceeds to copy the next batch.
 
+### Crash & Interruption Recovery
+The script keeps track of already backed up files in a local `.backup_history.txt` log file inside your source directory:
+*   **Automatic Skip:** If the copy process is interrupted, crashes, or is stopped midway, simply run the script again. It will read the history log and immediately skip any files that have already been backed up and confirmed, picking up exactly where it left off.
+*   **Reset History:** If you want to clear the history log and start the entire backup fresh, pass the `--reset-history` command-line flag.
+
 ---
 
 ## Pre-splitting Folders by Size (Optional)
 If you have a very large, flat folder of photos and want to physically organize them into size-bounded subfolders *before* transferring them, you can use the included `create_batches.py` utility:
 
 ```bash
-./create_batches.py /path/to/flat/photos /path/to/output/batches --max-size 500
+./create_batches.py /path/to/flat/photos /path/to/output/batches --max-size 2000
 ```
 This utility:
-*   Groups files so that the sum of file sizes in each subfolder does not exceed the limit (e.g. `--max-size 500` for 500MB).
+*   Groups files so that the sum of file sizes in each subfolder does not exceed the limit (e.g. `--max-size 2000` for 2GB).
 *   Creates directories named `01_batch`, `02_batch`, etc. inside the output path.
 *   By default, it **copies** the files. Add the `--move` flag to physically move the files instead.
 *   Once split, you can set `SRC_DIR` to the output folder and `backup_tool.py` will process it folder-by-folder.
@@ -61,8 +66,8 @@ SRC_DIR=/path/to/your/photos
 # Optional: Manual mount path (leave empty for auto-detection)
 PIXEL_CAMERA_DIR=
 
-# Optional: Number of files per batch for flat directories
-BATCH_SIZE=100
+# Optional: The maximum cumulative size of virtual batches in MB (default: 2000)
+BATCH_SIZE_MB=2000
 ```
 
 ### 3. Running the Tool
@@ -70,7 +75,7 @@ Run the executable script:
 ```bash
 ./backup_tool.py
 ```
-*Note: You can override `.env` settings on the fly using command-line arguments (e.g., `./backup_tool.py --src /my/custom/path --batch-size 50`).*
+*Note: You can override `.env` settings on the fly using command-line arguments (e.g., `./backup_tool.py --src /my/custom/path --batch-size-mb 2000 --reset-history`).*
 
 ---
 

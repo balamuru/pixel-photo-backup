@@ -23,11 +23,15 @@ Use this skill when the user wants to back up directories of photos/videos to an
      ```
      Or override parameters directly:
      ```bash
-     python3 backup_tool.py --src "/path/to/source"
+     python3 backup_tool.py --src "/path/to/source" --batch-size-mb 2000
+     ```
+     To clear the history and start fresh:
+     ```bash
+     python3 backup_tool.py --src "/path/to/source" --reset-history
      ```
    - (Optional) If you need to physically pre-split a massive flat list of files into size-bounded subfolders first, run the utility:
      ```bash
-     python3 create_batches.py "/path/to/source" "/path/to/output" --max-size 500
+     python3 create_batches.py "/path/to/source" "/path/to/output" --max-size 2000
      ```
 
 

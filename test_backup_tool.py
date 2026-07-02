@@ -126,5 +126,56 @@ class TestBackupTool(unittest.TestCase):
             history = backup_tool.load_history(self.src_dir)
             self.assertEqual(history, {"a.jpg", "b.jpg", "c.jpg"})
 
+import pull_source_media
+
+class TestPullSourceMedia(unittest.TestCase):
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp()
+        self.local_dest = os.path.join(self.test_dir, "local_dest")
+        self.source_phone = os.path.join(self.test_dir, "source_phone")
+        
+        # Build source phone paths
+        self.camera_path = os.path.join(self.source_phone, "Internal shared storage", "DCIM", "Camera")
+        self.wa_img_path = os.path.join(self.source_phone, "Internal shared storage", "Android", "media", "com.whatsapp", "WhatsApp", "Media", "WhatsApp Images")
+        self.wa_vid_path = os.path.join(self.source_phone, "Internal shared storage", "Android", "media", "com.whatsapp", "WhatsApp", "Media", "WhatsApp Video")
+        
+        os.makedirs(self.camera_path)
+        os.makedirs(self.wa_img_path)
+        os.makedirs(self.wa_vid_path)
+        os.makedirs(self.local_dest)
+        
+    def tearDown(self):
+        shutil.rmtree(self.test_dir)
+        
+    def test_detect_source_device(self):
+        with patch('glob.glob', return_value=[
+            "/run/user/1000/gvfs/mtp:host=Google_Pixel_MB8090303718",
+            "/run/user/1000/gvfs/mtp:host=Samsung_Galaxy_S20"
+        ]), patch('os.path.isdir', return_value=True):
+            # Should choose the non-Pixel phone
+            source = pull_source_media.detect_source_device("/run/user/1000/gvfs/mtp:host=Google_Pixel_MB8090303718")
+            self.assertEqual(source, "/run/user/1000/gvfs/mtp:host=Samsung_Galaxy_S20")
+
+    def test_run_pull_copies_files(self):
+        # Create some files on the source phone
+        with open(os.path.join(self.camera_path, "pic1.jpg"), "w") as f:
+            f.write("dummy camera pic")
+        with open(os.path.join(self.wa_img_path, "wa_pic1.jpg"), "w") as f:
+            f.write("dummy whatsapp pic")
+        with open(os.path.join(self.wa_vid_path, "wa_vid1.mp4"), "w") as f:
+            f.write("dummy whatsapp video")
+            
+        # Run pull utility
+        pull_source_media.run_pull(self.local_dest, self.source_phone)
+        
+        # Verify folders exist locally and files are copied
+        self.assertTrue(os.path.exists(os.path.join(self.local_dest, "DCIM_Camera", "pic1.jpg")))
+        self.assertTrue(os.path.exists(os.path.join(self.local_dest, "WhatsApp_Images", "wa_pic1.jpg")))
+        self.assertTrue(os.path.exists(os.path.join(self.local_dest, "WhatsApp_Video", "wa_vid1.mp4")))
+        
+        # Verify content matches
+        with open(os.path.join(self.local_dest, "DCIM_Camera", "pic1.jpg"), "r") as f:
+            self.assertEqual(f.read(), "dummy camera pic")
+
 if __name__ == "__main__":
     unittest.main()

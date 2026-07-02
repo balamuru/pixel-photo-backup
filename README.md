@@ -31,6 +31,20 @@ The script keeps track of already backed up files in a local `.backup_history.tx
 
 ---
 
+## Ingesting Media from Source Phone (First Stage)
+Before running the backup tool, you can pull media (Camera photos, WhatsApp Images, and WhatsApp Videos) from your primary source phone (not the Pixel device) to your computer's local staging folder:
+
+```bash
+./pull_source_media.py
+```
+This utility:
+*   Auto-detects any attached MTP phone device (filtering out your backup Pixel).
+*   Scans the standard locations on the phone for `DCIM/Camera`, `WhatsApp Images`, and `WhatsApp Video`.
+*   Copies files to your local staging directory (defined as `LOCAL_STAGE_DIR` in `.env` or defaulting to `SRC_DIR`).
+*   Automatically skips already copied files to enable quick resuming if the ingestion is interrupted.
+
+---
+
 ## Getting Started
 
 ### 1. Prerequisites

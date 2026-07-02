@@ -14,7 +14,14 @@ Use this skill when the user wants to back up directories of photos/videos to an
    - Verify the mount is active by listing `/run/user/<uid>/gvfs/`.
    - If the folder is empty or not found, ask the user to unlock the phone and switch USB usage to **File Transfer / Android Auto**.
 
-2. **Run the backup script**
+2. **(Optional) Ingest Media from Source Phone**
+   - If the user wants to pull photos and WhatsApp media from their primary phone first, run:
+     ```bash
+     python3 pull_source_media.py
+     ```
+     This copies files from the source phone's Camera and WhatsApp media folders to the local staging directory.
+
+3. **Run the backup script**
    - The reusable script is saved at the root of the project: `backup_tool.py`.
    - The script can be configured via a local `.env` file in the project folder, containing the source directory `SRC_DIR` and optionally the destination `PIXEL_CAMERA_DIR`.
    - In your turn, you can invoke the script:
@@ -29,6 +36,7 @@ Use this skill when the user wants to back up directories of photos/videos to an
      ```bash
      python3 backup_tool.py --src "/path/to/source" --reset-history
      ```
+
 
 
 ## Critical Guidelines

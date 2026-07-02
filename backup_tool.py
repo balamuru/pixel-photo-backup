@@ -107,6 +107,40 @@ def save_history(src_root, rel_paths):
         for p in rel_paths:
             f.write(p + "\n")
 
+def split_into_batches(file_paths, batch_size_mb):
+    """Splits a list of file paths into virtual batches not exceeding batch_size_mb."""
+    max_size_bytes = batch_size_mb * 1024 * 1024
+    batches = []
+    current_batch = []
+    current_batch_bytes = 0
+    
+    for f_path in file_paths:
+        try:
+            f_size = os.path.getsize(f_path)
+        except Exception:
+            f_size = 0
+            
+        if f_size > max_size_bytes:
+            # If a single file exceeds the max size, it gets its own batch
+            if current_batch:
+                batches.append(current_batch)
+                current_batch = []
+                current_batch_bytes = 0
+            batches.append([f_path])
+            continue
+            
+        if current_batch_bytes + f_size > max_size_bytes:
+            batches.append(current_batch)
+            current_batch = [f_path]
+            current_batch_bytes = f_size
+        else:
+            current_batch.append(f_path)
+            current_batch_bytes += f_size
+            
+    if current_batch:
+        batches.append(current_batch)
+    return batches
+
 def run_backup(src_root, dest_dir=None, batch_size_mb=2000, reset_history=False):
     if not src_root:
         print("Error: No source directory specified. Define 'SRC_DIR' in '.env' or use '--src'.")
@@ -161,31 +195,41 @@ def run_backup(src_root, dest_dir=None, batch_size_mb=2000, reset_history=False)
                 print(f"Skipping subdirectory '{sd_name}' (all files already backed up).")
                 continue
                 
+            batches = split_into_batches(files_to_copy, batch_size_mb)
+            total_batches = len(batches)
+            
             print(f"\n==================================================")
             print(f"Processing subdirectory: {sd_name} ({len(files_to_copy)}/{len(files_in_sd)} files pending)")
+            if total_batches > 1:
+                print(f"Splitting subdirectory files into {total_batches} sub-batches due to size (max per batch: {batch_size_mb} MB).")
             print(f"==================================================")
             
-            # Ensure destination is clear before starting
-            clear_camera_dir(dest_dir)
-            
-            # Copy files
-            success = copy_files(files_to_copy, dest_dir)
-            if not success:
-                print("Warning: Some files failed to copy.")
+            for idx, batch in enumerate(batches, 1):
+                batch_size_mb_actual = sum(os.path.getsize(p) for p in batch) / (1024 * 1024)
+                batch_label = f"'{sd_name}'" if total_batches == 1 else f"'{sd_name}' (Batch {idx} of {total_batches}, {batch_size_mb_actual:.1f} MB)"
+                print(f"\n--- Copying {batch_label} ---")
                 
-            # Ask for confirmation
-            while True:
-                response = input(f"\nHave you confirmed that files from '{sd_name}' are backed up on Google Photos? (yes/no): ").strip().lower()
-                if response in ("yes", "y"):
-                    print(f"Confirmed. Proceeding to clear the device and copy the next folder...")
-                    # Save progress to history
-                    save_history(src_root, [os.path.relpath(p, src_root) for p in files_to_copy])
-                    break
-                elif response in ("no", "n"):
-                    print("Holding. Please verify your backups and run again when ready.")
-                    sys.exit(0)
-                else:
-                    print("Invalid input. Please enter 'yes' or 'no'.")
+                # Ensure destination is clear before starting
+                clear_camera_dir(dest_dir)
+                
+                # Copy files
+                success = copy_files(batch, dest_dir)
+                if not success:
+                    print("Warning: Some files failed to copy.")
+                    
+                # Ask for confirmation
+                while True:
+                    response = input(f"\nHave you confirmed that files from {batch_label} are backed up on Google Photos? (yes/no): ").strip().lower()
+                    if response in ("yes", "y"):
+                        print(f"Confirmed. Proceeding to clear the device and copy the next batch...")
+                        # Save progress to history
+                        save_history(src_root, [os.path.relpath(p, src_root) for p in batch])
+                        break
+                    elif response in ("no", "n"):
+                        print("Holding. Please verify your backups and run again when ready.")
+                        sys.exit(0)
+                    else:
+                        print("Invalid input. Please enter 'yes' or 'no'.")
     else:
         # Scenario B: Flat directory with no subdirectories. Batch the files by cumulative size.
         all_files = [os.path.join(src_root, f) for f in os.listdir(src_root) if os.path.isfile(os.path.join(src_root, f)) and not f.startswith(".")]
@@ -197,39 +241,7 @@ def run_backup(src_root, dest_dir=None, batch_size_mb=2000, reset_history=False)
             return
             
         total_files = len(pending_files)
-        
-        # Group files into virtual batches not exceeding max size
-        max_size_bytes = batch_size_mb * 1024 * 1024
-        batches = []
-        current_batch = []
-        current_batch_bytes = 0
-        
-        for f_path in pending_files:
-            try:
-                f_size = os.path.getsize(f_path)
-            except Exception:
-                f_size = 0
-                
-            if f_size > max_size_bytes:
-                # If a single file exceeds the max size, it gets its own batch
-                if current_batch:
-                    batches.append(current_batch)
-                    current_batch = []
-                    current_batch_bytes = 0
-                batches.append([f_path])
-                continue
-                
-            if current_batch_bytes + f_size > max_size_bytes:
-                batches.append(current_batch)
-                current_batch = [f_path]
-                current_batch_bytes = f_size
-            else:
-                current_batch.append(f_path)
-                current_batch_bytes += f_size
-                
-        if current_batch:
-            batches.append(current_batch)
-            
+        batches = split_into_batches(pending_files, batch_size_mb)
         total_batches = len(batches)
         
         print(f"\nScenario B: Flat directory found. {total_files} files pending backup.")

@@ -126,6 +126,40 @@ class TestBackupTool(unittest.TestCase):
             history = backup_tool.load_history(self.src_dir)
             self.assertEqual(history, {"a.jpg", "b.jpg", "c.jpg"})
 
+    def test_subdirectory_sub_batching(self):
+        # Create a subdirectory with large files
+        sub_dir = os.path.join(self.src_dir, "sub_dir")
+        os.makedirs(sub_dir)
+        file_names = ["a.jpg", "b.jpg", "c.jpg"]
+        for f in file_names:
+            with open(os.path.join(sub_dir, f), "w") as fp:
+                fp.write("dummy")
+
+        # Mock sizes so a + b > 2000MB, c starts new batch
+        # a.jpg = 1500MB
+        # b.jpg = 1500MB -> Batch 1 = [a.jpg], current = [b.jpg] (1500MB)
+        # c.jpg = 1500MB -> Batch 2 = [b.jpg], current = [c.jpg] (1500MB)
+        # End loop -> Batch 3 = [c.jpg]
+        # Total batches = 3
+        sizes = {
+            os.path.join(sub_dir, "a.jpg"): 1500 * 1024 * 1024,
+            os.path.join(sub_dir, "b.jpg"): 1500 * 1024 * 1024,
+            os.path.join(sub_dir, "c.jpg"): 1500 * 1024 * 1024,
+        }
+        
+        def mock_getsize(path):
+            return sizes.get(path, 0)
+
+        with patch('os.path.getsize', side_effect=mock_getsize), \
+             patch('backup_tool.copy_files', return_value=True) as mock_copy, \
+             patch('backup_tool.clear_camera_dir') as mock_clear, \
+             patch('builtins.input', side_effect=["y", "y", "y"]):
+             
+            backup_tool.run_backup(self.src_dir, self.dest_dir, batch_size_mb=2000)
+            
+            # Verify copy was called 3 times (due to size sub-batching)
+            self.assertEqual(mock_copy.call_count, 3)
+
 import pull_source_media
 
 class TestPullSourceMedia(unittest.TestCase):

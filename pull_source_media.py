@@ -104,6 +104,14 @@ def run_pull(local_dest, source_device_path=None):
         print("Error: No local destination directory specified. Define 'LOCAL_STAGE_DIR' in '.env' or use '--dest'.")
         sys.exit(1)
         
+    local_dest = os.path.expanduser(local_dest)
+    if not os.path.isdir(local_dest):
+        print(f"Creating local staging destination directory '{local_dest}'...")
+        os.makedirs(local_dest, exist_ok=True)
+        
+    if source_device_path is not None:
+        source_device_path = os.path.expanduser(source_device_path)
+        
     if source_device_path is None:
         pixel_camera_dir = os.environ.get("BACKUP_PIXEL_CAMERA_DIR")
         # Try to extract mount root from camera directory

@@ -112,9 +112,10 @@ def run_backup(src_root, dest_dir=None, batch_size_mb=2000, reset_history=False)
         print("Error: No source directory specified. Define 'SRC_DIR' in '.env' or use '--src'.")
         sys.exit(1)
         
+    src_root = os.path.expanduser(src_root)
     if not os.path.isdir(src_root):
-        print(f"Error: Source directory '{src_root}' does not exist.")
-        sys.exit(1)
+        print(f"Source directory '{src_root}' does not exist. Creating it...")
+        os.makedirs(src_root, exist_ok=True)
         
     if not dest_dir:
         dest_dir = os.environ.get("BACKUP_PIXEL_CAMERA_DIR") or get_pixel_camera_dir()
@@ -123,6 +124,8 @@ def run_backup(src_root, dest_dir=None, batch_size_mb=2000, reset_history=False)
             print("Ensure your phone is connected, unlocked, and set to 'File Transfer' mode,")
             print("or explicitly set 'BACKUP_PIXEL_CAMERA_DIR' in your '.env' file.")
             sys.exit(1)
+            
+    dest_dir = os.path.expanduser(dest_dir)
             
     print(f"Using source directory: {src_root}")
     print(f"Using destination Pixel directory: {dest_dir}")

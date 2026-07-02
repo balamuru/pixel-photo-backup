@@ -29,10 +29,6 @@ Use this skill when the user wants to back up directories of photos/videos to an
      ```bash
      python3 backup_tool.py --src "/path/to/source" --reset-history
      ```
-   - (Optional) If you need to physically pre-split a massive flat list of files into size-bounded subfolders first, run the utility:
-     ```bash
-     python3 create_batches.py "/path/to/source" "/path/to/output" --max-size 2000
-     ```
 
 
 ## Critical Guidelines

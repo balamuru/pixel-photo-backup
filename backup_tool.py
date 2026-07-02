@@ -150,7 +150,7 @@ def run_backup(src_root, dest_dir=None, batch_size_mb=2000, reset_history=False)
             sd_name = os.path.basename(sd)
             
             # Get files and filter out already backed up files
-            files_in_sd = [os.path.join(sd, f) for f in os.listdir(sd) if os.path.isfile(os.path.join(sd, f))]
+            files_in_sd = [os.path.join(sd, f) for f in os.listdir(sd) if os.path.isfile(os.path.join(sd, f)) and not f.startswith(".")]
             files_to_copy = [p for p in files_in_sd if os.path.relpath(p, src_root) not in history]
             files_to_copy.sort()
             
@@ -185,7 +185,7 @@ def run_backup(src_root, dest_dir=None, batch_size_mb=2000, reset_history=False)
                     print("Invalid input. Please enter 'yes' or 'no'.")
     else:
         # Scenario B: Flat directory with no subdirectories. Batch the files by cumulative size.
-        all_files = [os.path.join(src_root, f) for f in os.listdir(src_root) if os.path.isfile(os.path.join(src_root, f))]
+        all_files = [os.path.join(src_root, f) for f in os.listdir(src_root) if os.path.isfile(os.path.join(src_root, f)) and not f.startswith(".")]
         pending_files = [p for p in all_files if os.path.relpath(p, src_root) not in history]
         pending_files.sort()
         

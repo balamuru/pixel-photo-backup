@@ -31,21 +31,6 @@ The script keeps track of already backed up files in a local `.backup_history.tx
 
 ---
 
-## Pre-splitting Folders by Size (Optional)
-If you have a very large, flat folder of photos and want to physically organize them into size-bounded subfolders *before* transferring them, you can use the included `create_batches.py` utility:
-
-```bash
-./create_batches.py /path/to/flat/photos /path/to/output/batches --max-size 2000
-```
-This utility:
-*   Groups files so that the sum of file sizes in each subfolder does not exceed the limit (e.g. `--max-size 2000` for 2GB).
-*   Creates directories named `01_batch`, `02_batch`, etc. inside the output path.
-*   By default, it **copies** the files. Add the `--move` flag to physically move the files instead.
-*   Once split, you can set `SRC_DIR` to the output folder and `backup_tool.py` will process it folder-by-folder.
-
----
-
-
 ## Getting Started
 
 ### 1. Prerequisites
@@ -76,6 +61,12 @@ Run the executable script:
 ./backup_tool.py
 ```
 *Note: You can override `.env` settings on the fly using command-line arguments (e.g., `./backup_tool.py --src /my/custom/path --batch-size-mb 2000 --reset-history`).*
+
+### 4. Running the Tests
+You can run the mock-based unit tests to validate the batching and recovery behavior:
+```bash
+python3 -m unittest test_backup_tool.py
+```
 
 ---
 

@@ -26,6 +26,21 @@ This script copies files in throttled, sequential batches. After each batch:
 
 ---
 
+## Pre-splitting Folders by Size (Optional)
+If you have a very large, flat folder of photos and want to physically organize them into size-bounded subfolders *before* transferring them, you can use the included `create_batches.py` utility:
+
+```bash
+./create_batches.py /path/to/flat/photos /path/to/output/batches --max-size 500
+```
+This utility:
+*   Groups files so that the sum of file sizes in each subfolder does not exceed the limit (e.g. `--max-size 500` for 500MB).
+*   Creates directories named `01_batch`, `02_batch`, etc. inside the output path.
+*   By default, it **copies** the files. Add the `--move` flag to physically move the files instead.
+*   Once split, you can set `SRC_DIR` to the output folder and `backup_tool.py` will process it folder-by-folder.
+
+---
+
+
 ## Getting Started
 
 ### 1. Prerequisites

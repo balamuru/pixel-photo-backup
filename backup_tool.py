@@ -141,12 +141,22 @@ def split_into_batches(file_paths, batch_size_mb):
         batches.append(current_batch)
     return batches
 
-def run_backup(src_root, dest_dir=None, batch_size_mb=2000, reset_history=False):
+def run_backup(src_root, dest_dir=None, batch_size_mb=2000, reset_history=False, clear_history_only=False):
     if not src_root:
         print("Error: No source directory specified. Define 'SRC_DIR' in '.env' or use '--src'.")
         sys.exit(1)
         
     src_root = os.path.expanduser(src_root)
+    
+    if clear_history_only:
+        history_file = os.path.join(src_root, ".backup_history.txt")
+        if os.path.exists(history_file):
+            print("Clearing backup history log and exiting...")
+            os.remove(history_file)
+        else:
+            print("No backup history log found to clear.")
+        return
+
     if not os.path.isdir(src_root):
         print(f"Source directory '{src_root}' does not exist. Creating it...")
         os.makedirs(src_root, exist_ok=True)
@@ -293,6 +303,7 @@ if __name__ == "__main__":
     parser.add_argument("--dest", default=os.environ.get("BACKUP_PIXEL_CAMERA_DIR"), help="Explicit destination Camera directory (optional).")
     parser.add_argument("--batch-size-mb", type=int, default=default_batch_size_mb, help="Maximum batch size in MB when copying flat directory files (default: 2000).")
     parser.add_argument("--reset-history", action="store_true", help="Clear the backup history log and start fresh.")
+    parser.add_argument("--clear-history-only", action="store_true", help="Clear the backup history log and exit immediately without backing up.")
     
     args = parser.parse_args()
-    run_backup(args.src, args.dest, args.batch_size_mb, args.reset_history)
+    run_backup(args.src, args.dest, args.batch_size_mb, args.reset_history, args.clear_history_only)

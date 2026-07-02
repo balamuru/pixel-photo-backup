@@ -47,6 +47,18 @@ class TestBackupTool(unittest.TestCase):
                 
         self.assertFalse(os.path.exists(history_file))
 
+    def test_clear_history_only(self):
+        # Verify history file can be cleared without running backup (no get_pixel_camera_dir mock needed)
+        rel_paths = ["file1.jpg"]
+        backup_tool.save_history(self.src_dir, rel_paths)
+        
+        history_file = os.path.join(self.src_dir, ".backup_history.txt")
+        self.assertTrue(os.path.exists(history_file))
+        
+        # This should return immediately without trying to locate device or directories
+        backup_tool.run_backup(self.src_dir, self.dest_dir, clear_history_only=True)
+        self.assertFalse(os.path.exists(history_file))
+
     def test_virtual_batching_by_size(self):
         # Create flat files of specific sizes (sizes in MB)
         # We will mock os.path.getsize to return custom sizes

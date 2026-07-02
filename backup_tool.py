@@ -117,11 +117,11 @@ def run_backup(src_root, dest_dir=None, batch_size_mb=2000, reset_history=False)
         sys.exit(1)
         
     if not dest_dir:
-        dest_dir = os.environ.get("PIXEL_CAMERA_DIR") or get_pixel_camera_dir()
+        dest_dir = os.environ.get("BACKUP_PIXEL_CAMERA_DIR") or get_pixel_camera_dir()
         if not dest_dir:
             print("Error: Could not locate your Google Pixel Camera directory.")
             print("Ensure your phone is connected, unlocked, and set to 'File Transfer' mode,")
-            print("or explicitly set 'PIXEL_CAMERA_DIR' in your '.env' file.")
+            print("or explicitly set 'BACKUP_PIXEL_CAMERA_DIR' in your '.env' file.")
             sys.exit(1)
             
     print(f"Using source directory: {src_root}")
@@ -275,7 +275,7 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description="Iterative copy/backup tool for MTP Google Pixel.")
     parser.add_argument("--src", default=os.environ.get("SRC_DIR"), help="Source root directory containing subdirectories or files of images.")
-    parser.add_argument("--dest", default=os.environ.get("PIXEL_CAMERA_DIR"), help="Explicit destination Camera directory (optional).")
+    parser.add_argument("--dest", default=os.environ.get("BACKUP_PIXEL_CAMERA_DIR"), help="Explicit destination Camera directory (optional).")
     parser.add_argument("--batch-size-mb", type=int, default=default_batch_size_mb, help="Maximum batch size in MB when copying flat directory files (default: 2000).")
     parser.add_argument("--reset-history", action="store_true", help="Clear the backup history log and start fresh.")
     

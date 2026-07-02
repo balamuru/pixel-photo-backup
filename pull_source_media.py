@@ -105,7 +105,7 @@ def run_pull(local_dest, source_device_path=None):
         sys.exit(1)
         
     if source_device_path is None:
-        pixel_camera_dir = os.environ.get("PIXEL_CAMERA_DIR")
+        pixel_camera_dir = os.environ.get("BACKUP_PIXEL_CAMERA_DIR")
         # Try to extract mount root from camera directory
         pixel_mount = None
         if pixel_camera_dir:

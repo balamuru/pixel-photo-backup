@@ -23,7 +23,7 @@ Use this skill when the user wants to back up directories of photos/videos to an
 
 3. **Run the backup script**
    - The reusable script is saved at the root of the project: `backup_tool.py`.
-   - The script can be configured via a local `.env` file in the project folder, containing the source directory `SRC_DIR` and optionally the destination `PIXEL_CAMERA_DIR`.
+   - The script can be configured via a local `.env` file in the project folder, containing the source directory `SRC_DIR` and optionally the destination `BACKUP_PIXEL_CAMERA_DIR`.
    - In your turn, you can invoke the script:
      ```bash
      python3 backup_tool.py

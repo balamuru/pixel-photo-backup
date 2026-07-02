@@ -63,7 +63,7 @@ Edit `.env` to set your paths:
 SRC_DIR=/path/to/your/photos
 
 # Optional: Manual mount path (leave empty for auto-detection)
-PIXEL_CAMERA_DIR=
+BACKUP_PIXEL_CAMERA_DIR=
 
 # Optional: The maximum cumulative size of virtual batches in MB (default: 2000)
 BATCH_SIZE_MB=2000
